@@ -1,0 +1,41 @@
+---
+name: RESTful API Principles
+globs:
+  - "src/routes/**/*.py"
+  - "src/api/**/*.py"
+---
+
+## Naming
+- Routes must use nouns, not verbs:
+  GET /weather not GET /getWeather
+  POST /events not POST /createEvent
+- Use plural nouns for collections: /readings, /events, /cities
+- Use path parameters for specific resources: /events/{event_id}
+- Use query parameters for filtering, not separate endpoints:
+  /events?city=Toronto&window=24h
+
+## HTTP Methods
+- GET — read only, never modifies data
+- POST — create a new resource
+- PUT — replace a resource entirely
+- PATCH — update part of a resource
+- DELETE — remove a resource
+- Never use GET to trigger an action or mutation
+
+## Status Codes
+- 200 OK — successful GET or PATCH
+- 201 Created — successful POST that created a resource
+- 400 Bad Request — invalid or missing input from the client
+- 404 Not Found — resource does not exist
+- 422 Unprocessable Entity — input is valid JSON but fails validation
+- 500 Internal Server Error — unexpected failure on the server side
+- Never return 200 for an error response
+
+## Design Principles
+- Endpoints must be stateless — no session or in-memory state between requests
+- A response must never expose internal implementation details like
+  raw database errors, stack traces, or ORM model internals
+- Filtering, sorting, and pagination belong in query parameters —
+  never create a separate endpoint for each variation
+- Related resources should be navigable:
+  /cities/{city_id}/events is preferable to /events?city_id=123

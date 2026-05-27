@@ -1,0 +1,42 @@
+---
+name: Testing Rules
+globs:
+  - "tests/**/*.py"
+---
+
+## Framework
+- Use pytest for all tests — no unittest
+- Use FastAPI's TestClient for all API tests — never spin up a live server
+- Use a dedicated test database that is created fresh and torn down per
+  session — never touch the production database
+
+## Structure
+- Keep tests separated by layer:
+  tests/test_api.py, tests/test_db.py, tests/test_integration.py
+- Use pytest fixtures for all setup and teardown logic — no manual
+  setup inside test functions
+- Parametrize any test that runs the same logic across multiple cities
+  or time windows
+
+## Writing Tests
+- Every test function name must describe the exact scenario being tested:
+  test_get_spikes_returns_empty_list_when_no_data_in_window
+  not test_1 or test_spikes
+- Every test must have a one-line docstring explaining the scenario
+- Every test must be capable of failing — no unconditional passes
+- Always assert on the actual output shape, status code, and data —
+  never just assert the code ran without crashing
+
+## Test Data
+- Use realistic placeholder data — real city names, plausible temperatures,
+  valid timestamps — never foo, bar, or 999
+- Never hardcode database URLs or credentials — read from environment
+  variables or fixtures
+- Do not assert on exact timestamps — use ranges or relative comparisons
+
+## Do NOT
+- Do not duplicate or overwrite developer-provided test scripts —
+  extend them only
+- Do not query the database directly inside API tests — go through
+  the API layer only
+- Do not leave commented-out tests in the codebase

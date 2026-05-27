@@ -1,0 +1,34 @@
+---
+name: FastAPI Rules
+globs:
+  - "src/routes/**/*.py"
+  - "src/api/**/*.py"
+  - "main.py"
+---
+
+## Endpoints
+- All endpoint functions must be async def — never plain def
+- Every endpoint must have a response_model parameter defined
+- All request bodies must be typed with a Pydantic model — no raw dicts
+- Always raise HTTPException for errors, never generic Python exceptions
+- Use APIRouter to group related endpoints — register all routers in main.py
+- Add a docstring to every endpoint — FastAPI renders these in /docs
+
+## Pydantic Models
+- Define all request and response models in a dedicated schemas.py file
+- Always set model config to forbid extra fields to prevent unexpected input
+- Optional fields must have a default value — never leave them bare
+- Use Field() to add validation constraints and description text
+
+## Project Structure
+- Routes go in src/routes/, one file per resource (weather.py, events.py)
+- Business logic goes in src/services/ — never inside the route handler
+- Database access goes in src/db/ — never directly inside routes
+- Environment variables must be loaded via a config.py using pydantic-settings
+
+## Response Shape
+- Always return responses in this consistent shape:
+  { "success": true, "data": ..., "error": null }
+- Never return raw SQLAlchemy model instances — always serialize through
+  a Pydantic response model first
+- Empty results return 200 with an empty list, not a 404
