@@ -9,25 +9,12 @@ class StrictBaseModel(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-
-class HealthData(StrictBaseModel):
-    """Represents basic health and metadata for the API service."""
+class HealthResponse(StrictBaseModel):
+    """Response model for the `/health` endpoint."""
 
     status: str = Field(..., description="Overall health status of the API, e.g., 'ok'.")
-    service: str = Field(..., description="Name of the service.")
-    version: str = Field(..., description="Version of the running service.")
-    timestamp: datetime = Field(..., description="Timestamp when the health was evaluated.")
-
-
-class HealthResponse(StrictBaseModel):
-    """Standard envelope for the health check response."""
-
-    success: bool = Field(..., description="Indicates whether the request was successful.")
-    data: HealthData = Field(..., description="Health information payload.")
-    error: Optional[str] = Field(
-        None,
-        description="Error message if the request failed; otherwise null.",
-    )
+    readings_stored: int = Field(..., ge=0, description="Number of stored readings.")
+    events_stored: int = Field(..., ge=0, description="Number of stored notable events.")
 
 
 class Reading(StrictBaseModel):
@@ -40,22 +27,10 @@ class Reading(StrictBaseModel):
     recorded_at: datetime = Field(..., description="Timestamp when the reading was recorded.")
 
 
-class ReadingsData(StrictBaseModel):
-    """Container for a list of raw readings for a specific city."""
-
-    city: str = Field(..., description="City for which readings are returned.")
-    readings: List[Reading] = Field(..., description="List of recent raw readings for the city.")
-
-
 class ReadingsResponse(StrictBaseModel):
-    """Standard envelope for the readings endpoint response."""
+    """Response model for the `/readings` endpoint."""
 
-    success: bool = Field(..., description="Indicates whether the request was successful.")
-    data: ReadingsData = Field(..., description="Readings payload for the specified city.")
-    error: Optional[str] = Field(
-        None,
-        description="Error message if the request failed; otherwise null.",
-    )
+    readings: List[Reading] = Field(..., description="List of readings, most recent first.")
 
 
 class Event(StrictBaseModel):
@@ -71,20 +46,7 @@ class Event(StrictBaseModel):
         description="Human-readable description or context for the event.",
     )
 
-
-class EventsData(StrictBaseModel):
-    """Container for a list of spike or event records for a specific city."""
-
-    city: str = Field(..., description="City for which events are returned.")
-    events: List[Event] = Field(..., description="List of spike or event records for the city.")
-
-
 class EventsResponse(StrictBaseModel):
-    """Standard envelope for the events endpoint response."""
+    """Response model for the `/events` endpoint."""
 
-    success: bool = Field(..., description="Indicates whether the request was successful.")
-    data: EventsData = Field(..., description="Events payload for the specified city.")
-    error: Optional[str] = Field(
-        None,
-        description="Error message if the request failed; otherwise null.",
-    )
+    events: List[Event] = Field(..., description="List of events, most recent first.")

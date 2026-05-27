@@ -27,8 +27,11 @@ globs:
 - Environment variables must be loaded via a config.py using pydantic-settings
 
 ## Response Shape
-- Always return responses in this consistent shape:
-  { "success": true, "data": ..., "error": null }
+- Responses must match the endpoint contract exactly (no global envelope unless the endpoint spec requires it)
+- Current required contracts:
+  - GET /health -> { "status": "ok", "readings_stored": <int>, "events_stored": <int> }
+  - GET /readings -> { "readings": [ ... ] }
+  - GET /events -> { "events": [ ... ] }
 - Never return raw SQLAlchemy model instances — always serialize through
   a Pydantic response model first
 - Empty results return 200 with an empty list, not a 404

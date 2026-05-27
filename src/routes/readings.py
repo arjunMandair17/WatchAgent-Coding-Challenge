@@ -1,6 +1,8 @@
+from typing import Optional
+
 from fastapi import APIRouter, Query
 
-from ..schemas import ReadingsData, ReadingsResponse
+from ..schemas import ReadingsResponse
 from ..services.readings import get_recent_readings
 
 router = APIRouter(prefix="/readings", tags=["readings"])
@@ -8,9 +10,12 @@ router = APIRouter(prefix="/readings", tags=["readings"])
 
 @router.get("", response_model=ReadingsResponse)
 async def get_readings(
-    city: str = Query(..., description="City to retrieve readings for, e.g., 'Toronto'."),
+    city: Optional[str] = Query(
+        None,
+        description="Optional city filter for readings, e.g., 'Ottawa'.",
+    ),
     limit: int = Query(
-        100,
+        50,
         gt=0,
         le=1000,
         description="Maximum number of recent readings to return.",
@@ -19,7 +24,4 @@ async def get_readings(
     """Return recent raw weather readings for the specified city."""
     # This function returns recent raw weather readings for a given city, limited by the specified count.
     readings = await get_recent_readings(city=city, limit=limit)
-
-    data = ReadingsData(city=city, readings=readings)
-
-    return ReadingsResponse(success=True, data=data, error=None)
+    return ReadingsResponse(readings=readings)
