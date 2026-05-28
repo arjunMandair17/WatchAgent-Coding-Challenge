@@ -9,6 +9,7 @@ class StrictBaseModel(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+
 class HealthResponse(StrictBaseModel):
     """Response model for the `/health` endpoint."""
 
@@ -20,11 +21,19 @@ class HealthResponse(StrictBaseModel):
 class Reading(StrictBaseModel):
     """Represents a single raw weather reading for a city."""
 
-    id: int = Field(..., description="Unique identifier for the reading.")
-    city: str = Field(..., description="City associated with the reading.")
-    temperature_c: float = Field(..., description="Temperature in degrees Celsius.")
-    humidity: float = Field(..., description="Relative humidity as a fraction between 0 and 1.")
-    recorded_at: datetime = Field(..., description="Timestamp when the reading was recorded.")
+    id: int
+    city: str
+    recorded_at: datetime
+    temperature_2m: float
+    apparent_temperature: float
+    precipitation: float
+    wind_speed_10m: float
+    weather_code: int
+    source: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class ReadingsResponse(StrictBaseModel):
@@ -36,15 +45,23 @@ class ReadingsResponse(StrictBaseModel):
 class Event(StrictBaseModel):
     """Represents a single spike or notable weather event for a city."""
 
-    id: int = Field(..., description="Unique identifier for the event.")
-    city: str = Field(..., description="City where the event occurred.")
-    spike_type: str = Field(..., description="Type of spike or unusual weather event.")
-    magnitude: float = Field(..., description="Magnitude or intensity of the event.")
-    detected_at: datetime = Field(..., description="Timestamp when the event was detected.")
-    description: Optional[str] = Field(
-        None,
-        description="Human-readable description or context for the event.",
-    )
+    id: int
+    event_type: str
+    metric: str
+    severity: int
+    city: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    rule_triggered: str
+    actual_value: float
+    expected_value: float
+    event_timestamp: datetime
+    recorded_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
 
 class EventsResponse(StrictBaseModel):
     """Response model for the `/events` endpoint."""

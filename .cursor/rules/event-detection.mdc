@@ -1,0 +1,91 @@
+---
+name: Event Detection Rules
+globs:
+  - src/services/poll.py
+  - src/services/event_detection.py
+---
+
+# Event Detection
+
+Detect **notable weather moments** worth monitoring — not every reading. Logic lives in `src/services/event_detection.py`. `poll.py` may call the detector but must not embed detection rules.
+
+## When to run detection
+
+- Run `detect_significant_events()` on a **new** reading **before** persisting it (avoids skewing the 12-hour baseline).
+- Require at least **3 prior readings** for that city before metric rules run.
+- Do not detect on duplicate timestamps (reading already stored for that city/time).
+- On failed Open-Meteo poll: log **city name and HTTP status code**; do not insert reading or event.
+
+## Detection rules (priority order)
+
+Return **at most one event per reading** — first matching rule wins.
+
+### Rule 1 — Severe weather code (WMO / Open-Meteo)
+
+- Fire only when the **new** code is in `SERIOUS_WEATHER_CODES` and differs from the previous reading.
+- Do **not** alert on low-signal changes (clear/partly cloudy/overcast 0–3, light drizzle/rain, fog alone).
+- `event_type`: `severe_weather`, `metric`: `weather_code`
+- Severe codes: 65, 67, 75, 82, 86, 95, 96, 99 (see `event_detection.py` for labels).
+
+### Rule 2 — Step change vs previous reading
+
+- Compare each metric in `THRESHOLDS` to the **most recent prior** reading for that city.
+- `event_type`: `spike` (positive delta) or `drop` (negative delta).
+- `expected_value` = previous reading value.
+
+### Rule 3 — Deviation vs 12-hour city baseline
+
+- Baseline = mean of stored readings for that city in the last **12 hours**, excluding the current reading.
+- Same thresholds as Rule 2.
+- `expected_value` = city baseline (not previous reading).
+
+### Metric thresholds
+
+| Metric | Threshold |
+|--------|-----------|
+| temperature_2m | 6°C |
+| apparent_temperature | 6°C |
+| precipitation | 2.0 mm |
+| wind_speed_10m | 17.0 km/h |
+
+## Severity
+
+- WMO hail thunderstorms (96, 99): **3**
+- Other severe weather codes: **2**
+- Metric spike/drop (Rules 2–3): **1** (may scale by delta magnitude later)
+
+## Required event fields (what / where / why / when)
+
+Every `SignificantEvent` must be understandable without opening other tables:
+
+- **What:** `event_type`, `metric`, `severity`
+- **Where:** `city` (latitude/longitude optional)
+- **Why:** `rule_triggered`, `actual_value`, `expected_value`
+- **When:** `event_timestamp` = reading observation time; `recorded_at` = detection time
+- **Evidence:** link triggering reading via `weather_reading_ids` / `significant_event_readings`
+
+## rule_triggered format
+
+Human-readable, with numbers. Examples:
+
+- `temperature_2m spike: 8.0 -> 14.0 (delta +6.0, threshold 6.0)`
+- `Severe condition entered: thunderstorm (WMO 95), was overcast (WMO 3)`
+
+## Selectivity and design intent
+
+- Prefer **useful, selective** alerts over noise; explain tradeoffs in the README.
+- Do **not** use shallow absolute rules (e.g. `temperature > 30°C`) without city/time context.
+- Detection is **per city** — Ottawa, Toronto, Vancouver use separate histories.
+- Optional later: cooldown (e.g. 6h) per `(city, metric, event_type)` to reduce repeat alerts.
+
+## Known limitations (MVP)
+
+- Thresholds are fixed per metric, not adjusted for time of day.
+- 12-hour baseline is city-wide, not hour-of-day bucketed.
+- Cross-city comparison is not a detection trigger.
+
+## Scope — do not
+
+- Put detection logic in API route handlers or `src/routes/`.
+- Use `src/schemas.py` for HTTP response shapes; use `src/db/schemas.py` for DB create validation.
+- Store derived aggregates as source of truth — compute baselines at detection time from stored readings.
