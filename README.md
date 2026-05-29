@@ -10,6 +10,11 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or D
 git clone <your-repo>
 cd Nokia-WeatherAPI
 cp .env.example .env
+```
+
+Edit `.env` and set a strong `POSTGRES_PASSWORD` (required). Then:
+
+```bash
 docker compose up --build
 ```
 
@@ -18,6 +23,8 @@ docker compose up --build
 - Health: http://localhost:8000/health
 
 The `api` container runs Alembic migrations on startup, then serves the app and background pollers.
+
+**Security:** Never commit `.env`. It is gitignored. If credentials were ever pushed, rotate the password and purge them from git history.
 
 Stop with `Ctrl+C`, or run `docker compose down` in another terminal.
 
@@ -28,7 +35,7 @@ Run Postgres only in Docker, API on the host:
 ```bash
 docker compose up -d postgres
 cp .env.example .env
-# Edit .env: set DATABASE_URL host to localhost instead of postgres
+# Set POSTGRES_PASSWORD in .env (POSTGRES_HOST=localhost is already in .env.example)
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1   # Windows
 pip install -r requirements.txt -r requirements-dev.txt
@@ -40,9 +47,11 @@ uvicorn src.main:app --reload --host 127.0.0.1 --port 8000
 
 ```bash
 docker compose up -d postgres
+cp .env.example .env
+# Set POSTGRES_PASSWORD in .env
 pip install -r requirements.txt -r requirements-dev.txt
 python -m alembic upgrade head
 pytest tests/ -v
 ```
 
-For tests against Docker Postgres, use `localhost` in `DATABASE_URL` (port `5432` is published).
+Tests use `POSTGRES_*` from `.env` with `POSTGRES_HOST=localhost` to reach the published Postgres port.

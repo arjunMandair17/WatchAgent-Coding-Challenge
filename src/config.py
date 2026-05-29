@@ -1,7 +1,7 @@
-from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from urllib.parse import quote_plus
 
-DEFAULT_DATABASE_URL = "postgresql+psycopg://weather:weather@localhost:5432/weather"
+from pydantic import field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -9,13 +9,46 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str = DEFAULT_DATABASE_URL
+    database_url: str | None = None
+    postgres_user: str | None = None
+    postgres_password: str | None = None
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_db: str | None = None
+
+    @model_validator(mode="after")
+    def resolve_database_url(self) -> "Settings":
+        """Build database_url from POSTGRES_* when DATABASE_URL is not set."""
+
+        if self.database_url:
+            return self
+        if (
+            self.postgres_user
+            and self.postgres_password is not None
+            and self.postgres_db
+        ):
+            user = quote_plus(self.postgres_user)
+            password = quote_plus(self.postgres_password)
+            object.__setattr__(
+                self,
+                "database_url",
+                (
+                    f"postgresql+psycopg://{user}:{password}"
+                    f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+                ),
+            )
+            return self
+        raise ValueError(
+            "Set DATABASE_URL or POSTGRES_USER, POSTGRES_PASSWORD, and POSTGRES_DB in .env"
+        )
 
     @field_validator("database_url")
     @classmethod
-    def require_postgresql_url(cls, value: str) -> str:
+    def require_postgresql_url(cls, value: str | None) -> str | None:
         """Reject non-PostgreSQL database URLs."""
 
+        if value is None:
+            return value
         if value.startswith("sqlite"):
             raise ValueError(
                 "SQLite is not supported; set DATABASE_URL to a PostgreSQL connection string"
@@ -28,4 +61,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
