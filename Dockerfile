@@ -12,7 +12,8 @@ COPY alembic.ini .
 COPY migrations ./migrations
 COPY src ./src
 COPY scripts/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+# Strip Windows CRLF so Linux can exec the script (avoids "no such file or directory").
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 EXPOSE 8000
 

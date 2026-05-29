@@ -21,6 +21,14 @@ On startup, the `api` container runs Alembic migrations, starts the HTTP server,
 
 **Database persistence:** data is stored in the `postgres_data` Docker volume and survives `docker compose stop` / `docker compose up`. Use `docker compose down -v` only if you want to wipe the database.
 
+If you see `role "weather_app" does not exist`, the volume was created with older settings. Reset it:
+
+```bash
+docker compose down -v
+cp .env.example .env
+docker compose up --build
+```
+
 **Environment variables:** all required variables are documented in `.env.example`. Copy that file to `.env` (gitignored). No credentials are committed to this repository; the default Compose file uses trust authentication for local development only.
 
 Windows (CMD): `copy .env.example .env` instead of `cp`.
