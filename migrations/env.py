@@ -19,7 +19,7 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    """Resolve the database URL from environment-backed settings."""
+    """Resolve the PostgreSQL database URL from environment-backed settings."""
 
     return settings.database_url
 

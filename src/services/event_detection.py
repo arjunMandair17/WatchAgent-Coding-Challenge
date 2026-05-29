@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 from ..db.models import SignificantEvent, WeatherReading
 
 THRESHOLDS = {
-    "temperature_2m": 6,
-    "apparent_temperature": 6,
+    "temperature_2m": 5,
+    "apparent_temperature": 5,
     "precipitation": 2.0,
-    "wind_speed_10m": 17.0,
+    "wind_speed_10m": 15.0,
 }
 
 # WMO codes (Open-Meteo) considered severe enough to alert on entry, not mere cloud-cover shifts.

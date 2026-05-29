@@ -5,13 +5,9 @@ from ..config import settings
 
 
 def get_engine():
-    """Create a SQLAlchemy Engine from the configured database URL."""
+    """Create a SQLAlchemy Engine from the configured PostgreSQL database URL."""
 
-    url = settings.database_url
-    connect_args = {}
-    if url.startswith("sqlite"):
-        connect_args = {"check_same_thread": False}
-    return create_engine(url, pool_pre_ping=True, connect_args=connect_args)
+    return create_engine(settings.database_url, pool_pre_ping=True)
 
 
 engine = get_engine()

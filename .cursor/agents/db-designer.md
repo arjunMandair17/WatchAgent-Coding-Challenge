@@ -48,11 +48,9 @@ anywhere else. That means capturing:
 
 ## Persistence
 
-- The database file or connection must survive container restarts
-- If using SQLite, the file must be written to a mounted volume path,
-  never inside the container filesystem
-- If using PostgreSQL, credentials and host must come from environment
-  variables, never hardcoded
+- PostgreSQL is the only supported database
+- Credentials and host must come from environment variables (`DATABASE_URL`),
+  never hardcoded
 - Always check that the volume mount is configured in docker-compose.yml
   before finalizing any schema work
 

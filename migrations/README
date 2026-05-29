@@ -1,2 +1,2 @@
-Generic single-database configuration.
+PostgreSQL configuration. The database URL is read from DATABASE_URL via src/config.py.
 

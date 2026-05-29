@@ -9,6 +9,7 @@ from ..db.models import WeatherReading
 from ..db.schemas import WeatherReadingCreate
 from ..db.session import SessionLocal
 from .event_detection import detect_significant_events
+from .db_storage import store_weather_data
 
 logger = logging.getLogger(__name__)
 
@@ -85,15 +86,8 @@ async def poll_weather_data(lat: float, lon: float) -> None:
             if exists is None:
                 reading = WeatherReading(**payload.model_dump())
                 event = detect_significant_events(reading, db)
-                db.add(reading)
-                db.flush()
-                if event is not None:
-                    event.weather_readings = [reading]
-                    db.add(event)
-                db.commit()
-                if event is not None:
-                    logger.info("Significant event detected: %s", event)
-
+                store_weather_data(reading, event, db)
+                
         except Exception:
             db.rollback()
             raise
