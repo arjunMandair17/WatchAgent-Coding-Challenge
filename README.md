@@ -2,42 +2,38 @@
 
 Tracks weather for Ottawa, Toronto, and Vancouver; detects significant events; exposes a REST API.
 
-## Quick start (Docker)
+## Running the stack (Docker)
 
-Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose).
+Requires [Docker](https://docs.docker.com/get-docker/) and Git.
 
 ```bash
 git clone <your-repo>
 cd Nokia-WeatherAPI
 cp .env.example .env
-```
-
-Edit `.env` and set a strong `POSTGRES_PASSWORD` (required). Then:
-
-```bash
 docker compose up --build
 ```
 
 - API: http://localhost:8000
-- Interactive docs: http://localhost:8000/docs
+- Docs: http://localhost:8000/docs
 - Health: http://localhost:8000/health
 
-The `api` container runs Alembic migrations on startup, then serves the app and background pollers.
+On startup, the `api` container runs Alembic migrations, starts the HTTP server, and runs background pollers for Ottawa, Toronto, and Vancouver.
 
-**Security:** Never commit `.env`. It is gitignored. If credentials were ever pushed, rotate the password and purge them from git history.
+**Database persistence:** data is stored in the `postgres_data` Docker volume and survives `docker compose stop` / `docker compose up`. Use `docker compose down -v` only if you want to wipe the database.
 
-Stop with `Ctrl+C`, or run `docker compose down` in another terminal.
+**Environment variables:** all required variables are documented in `.env.example`. Copy that file to `.env` (gitignored). No credentials are committed to this repository; the default Compose file uses trust authentication for local development only.
+
+Windows (CMD): `copy .env.example .env` instead of `cp`.
 
 ## Local development (optional)
 
-Run Postgres only in Docker, API on the host:
+Postgres in Docker, API on the host:
 
 ```bash
 docker compose up -d postgres
 cp .env.example .env
-# Set POSTGRES_PASSWORD in .env (POSTGRES_HOST=localhost is already in .env.example)
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1   # Windows
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt -r requirements-dev.txt
 python -m alembic upgrade head
 uvicorn src.main:app --reload --host 127.0.0.1 --port 8000
@@ -48,10 +44,7 @@ uvicorn src.main:app --reload --host 127.0.0.1 --port 8000
 ```bash
 docker compose up -d postgres
 cp .env.example .env
-# Set POSTGRES_PASSWORD in .env
 pip install -r requirements.txt -r requirements-dev.txt
 python -m alembic upgrade head
 pytest tests/ -v
 ```
-
-Tests use `POSTGRES_*` from `.env` with `POSTGRES_HOST=localhost` to reach the published Postgres port.

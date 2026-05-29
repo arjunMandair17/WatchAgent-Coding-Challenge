@@ -22,24 +22,23 @@ class Settings(BaseSettings):
 
         if self.database_url:
             return self
-        if (
-            self.postgres_user
-            and self.postgres_password is not None
-            and self.postgres_db
-        ):
+        if self.postgres_user and self.postgres_db:
             user = quote_plus(self.postgres_user)
-            password = quote_plus(self.postgres_password)
-            object.__setattr__(
-                self,
-                "database_url",
-                (
+            if self.postgres_password:
+                password = quote_plus(self.postgres_password)
+                url = (
                     f"postgresql+psycopg://{user}:{password}"
                     f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-                ),
-            )
+                )
+            else:
+                url = (
+                    f"postgresql+psycopg://{user}"
+                    f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+                )
+            object.__setattr__(self, "database_url", url)
             return self
         raise ValueError(
-            "Set DATABASE_URL or POSTGRES_USER, POSTGRES_PASSWORD, and POSTGRES_DB in .env"
+            "Set DATABASE_URL or POSTGRES_USER and POSTGRES_DB in .env"
         )
 
     @field_validator("database_url")

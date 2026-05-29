@@ -5,7 +5,8 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Local Docker stack only: no password required (see .env.example).
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:
@@ -26,7 +27,7 @@ services:
       - .env
     environment:
       POSTGRES_HOST: postgres
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}@postgres:5432/${POSTGRES_DB}
     depends_on:
       postgres:
         condition: service_healthy
