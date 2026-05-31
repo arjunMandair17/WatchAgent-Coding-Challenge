@@ -73,6 +73,14 @@ def test_too_few_readings(db):
     event = detect_significant_events(abnormal, db)
     assert event is None
 
+def test_slight_weather_change(db):
+    """A slight weather change does not trigger an event."""
+    base = datetime.now(timezone.utc)
+    _seed_history(db, base, 12, temperature_2m=10.0)
+    abnormal = _reading(recorded_at=base, temperature_2m=11.0)
+    db.flush()
+    event = detect_significant_events(abnormal, db)
+    assert event is None
 
 def test_weather_code_change(db):
     """Entering a new severe WMO code from another severe code triggers severe_weather."""

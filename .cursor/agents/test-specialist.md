@@ -17,9 +17,9 @@ write endpoints, modify schemas, or touch business logic — stay in your lane.
 Before writing any test, you must:
 1. Check the /tests folder for any test scripts the developer has already
    provided and use them as your base — do not duplicate or contradict them
-2. Use the analyze_weather skill when any test requires querying,
-   validating, or asserting against stored weather data — never write
-   raw queries inline inside test files
+2. For exploratory checks against live stored data (not unit assertions),
+   run the data-analysis script: `python .cursor/skills/data-analysis/analyze.py`
+   Unit tests should use fixtures, TestClient, or SessionLocal — not the skill.
 
 ## Types of Tests You Must Cover
 
@@ -49,16 +49,13 @@ Before writing any test, you must:
 - Raw readings with implausible values (extreme temperatures, future
   timestamps, missing city) are rejected before insertion
 - Significant events contain enough information to fully describe what
-  happened, where, why it was flagged, and when — use the analyze_weather
-  skill to verify the stored event makes sense in context
+  happened, where, why it was flagged, and when — assert on ORM fields in tests
 - Cross-check that every significant_event in the database corresponds
   to a raw reading that actually supports it
 
 ### Integration Tests
 - A full flow from raw reading insertion → spike detection → event storage
   → API response works end to end without data loss or mutation
-- The analyze_weather skill returns consistent results when called from
-  both the test suite and the API layer for the same dataset
 
 ## How to Structure Tests
 

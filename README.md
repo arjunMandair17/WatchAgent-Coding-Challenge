@@ -1,58 +1,29 @@
-# Nokia Weather API
+# WatchAgent: Weather Monitor & AI Assistant
 
-Tracks weather for Ottawa, Toronto, and Vancouver; detects significant events; exposes a REST API.
+## System Overview
 
-## Running the stack (Docker)
+## Architecture
 
-Requires [Docker](https://docs.docker.com/get-docker/) and Git.
+## Setup and Run Instructions
 
-```bash
-git clone <your-repo>
-cd Nokia-WeatherAPI
-cp .env.example .env
-docker compose up --build
-```
+## API Reference
 
-- API: http://localhost:8000
-- Docs: http://localhost:8000/docs
-- Health: http://localhost:8000/health
+### GET /health
 
-On startup, the `api` container runs Alembic migrations, starts the HTTP server, and runs background pollers for Ottawa, Toronto, and Vancouver.
+### GET /readings
 
-**Database persistence:** data is stored in the `postgres_data` Docker volume and survives `docker compose stop` / `docker compose up`. Use `docker compose down -v` only if you want to wipe the database.
+### GET /events
 
-If you see `role "weather_app" does not exist`, the volume was created with older settings. Reset it:
+## Running Tests
 
-```bash
-docker compose down -v
-cp .env.example .env
-docker compose up --build
-```
+## Technology Choices
 
-**Environment variables:** all required variables are documented in `.env.example`. Copy that file to `.env` (gitignored). No credentials are committed to this repository; the default Compose file uses trust authentication for local development only.
+## Event Detection Design
 
-Windows (CMD): `copy .env.example .env` instead of `cp`.
+## Cursor Setup
 
-## Local development (optional)
+### Rules
 
-Postgres in Docker, API on the host:
+### Agents
 
-```bash
-docker compose up -d postgres
-cp .env.example .env
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt -r requirements-dev.txt
-python -m alembic upgrade head
-uvicorn src.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-## Tests
-
-```bash
-docker compose up -d postgres
-cp .env.example .env
-pip install -r requirements.txt -r requirements-dev.txt
-python -m alembic upgrade head
-pytest tests/ -v
-```
+### Skills

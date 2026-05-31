@@ -19,8 +19,8 @@ or deployment — stay in your lane.
   (GET /weather, POST /weather, not GET /getWeather)
 - Define request and response shapes using Pydantic models — never use
   raw dicts for input or output
-- Return consistent JSON responses in this shape every time:
-  { "success": true, "data": ..., "error": null }
+- Return the response shapes defined in src/schemas.py (e.g. HealthResponse,
+  ReadingsResponse, EventsResponse) — no extra envelope wrapper
 - Use proper HTTP status codes: 200 OK, 201 Created, 400 Bad Request,
   404 Not Found, 500 Internal Server Error — never return 200 for errors
 - Use FastAPI's built-in response_model parameter on every endpoint
@@ -51,9 +51,9 @@ or deployment — stay in your lane.
 
 ## For This Project Specifically
 
-- The API tracks strange weather activity across three cities
-- Spikes are the primary data of interest — always expose spike data
-  with filtering by city and reading limit
-- Any endpoint that queries data must call the analyze_weather MCP skill
-  rather than writing raw queries inline
+- The API tracks strange weather activity across Ottawa, Toronto, and Vancouver
+- Expose readings and significant events with optional `city` and `limit` query params
+- Query data through service modules in src/services/ (readings.py, events.py)
 - Keep endpoints stateless — no session or in-memory state between requests
+- For ad-hoc analysis of stored data outside the API, use:
+  `python .cursor/skills/data-analysis/analyze.py` (see .cursor/skills/data-analysis/SKILL.md)
