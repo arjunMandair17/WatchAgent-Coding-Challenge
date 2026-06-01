@@ -16,6 +16,7 @@ app = FastAPI(
     description="API for tracking strange weather activity across three cities.",
 )
 
+# Runs pollers for each city on startup
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(poll_weather_data(45.42, -75.69)) # Ottawa
