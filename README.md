@@ -319,7 +319,8 @@ In the creation of this project, I made many meticulous decisions as to which te
 
 ## Event Detection Design
 
-The event detection model that I used for this project was meticulously designed with the aim of detecting strange spikes and dips in weather data across long and short periods of time. I tried to create a balance of detecting slight differences in weather data while filtering out general noise. 
+The event detection model that I used for this project was meticulously designed with the aim of detecting strange spikes and dips in weather data across long and short periods of time. I tried to create a balance of detecting slight differences in weather data while filtering out general noise. I also wanted the detection algorithm to be specific to the city the readings were collected from, not based on global constants. This is understandable considering the differences between the cities (for example, it is MUCH colder in Ottawa in December than it is in Vancouver). This was accomplished by creating a system that tracks changes between the most recent readings initially, then as a fallback queries the database to track changes between the current reading and recent history.
+
 The detection model has three main criteria that it uses to categorize an event:
 
 ### Weather Code Differences
