@@ -18,34 +18,34 @@ The service runs as two Docker containers: a **FastAPI API** process and **Postg
                                │ HTTPS GET /v1/forecast
                                │ (every 5 min per city)
                                ▼
-┌──────────────┐    ┌──────────────────────────────────────────────┐
-│   Client     │    │              api container                    │
-│  (browser,   │    │  ┌─────────────────────────────────────────┐ │
-│   curl)      │    │  │  poll.py (×3 asyncio tasks)             │ │
-└──────┬───────┘    │  │  Ottawa · Toronto · Vancouver           │ │
-       │ HTTP        │  └───────────────┬─────────────────────────┘ │
-       │ :8000       │                  │ new timestamp only         │
-       ▼             │                  ▼                            │
-┌──────────────┐    │  ┌──────────────────────────┐                 │
-│  FastAPI     │◄───┤  │  event_detection.py      │                 │
-│  routes      │    │  │  (thresholds, 12h avg, │                 │
-│  /health     │    │  │   severe WMO codes)      │                 │
-│  /readings   │    │  └───────────────┬──────────┘                 │
-│  /events     │    │                  │                            │
-└──────┬───────┘    │                  ▼                            │
-       │             │  ┌──────────────────────────┐                 │
-       │             │  │  db_storage.py           │                 │
-       │             │  │  SQLAlchemy ORM          │                 │
-       │             │  └───────────────┬──────────┘                 │
-       │             └──────────────────┼──────────────────────────────┘
+┌──────────────┐    ┌─────────────────────────────────────────────┐
+│   Client     │    │              api container                  |
+│  (browser,   │    │  ┌─────────────────────────────────────────┐│
+│   curl)      │    │  │  poll.py (×3 asyncio tasks)             ││
+└──────┬───────┘    │  │  Ottawa · Toronto · Vancouver           ││
+       │ HTTP       │  └───────────────┬─────────────────────────┘│
+       │ :8000      │                  │ new timestamp only       │
+       ▼            │                  ▼                          │
+┌──────────────┐    │  ┌──────────────────────────┐               │
+│  FastAPI     │◄───┤  │  event_detection.py      │               │
+│  routes      │    │  │  (thresholds, 12h avg, │                 │ 
+│  /health     │    │  │   severe WMO codes)      │               │
+│  /readings   │    │  └───────────────┬──────────┘               │
+│  /events     │    │                  │                          │
+└──────┬───────┘    │                  ▼                          │
+       │            │  ┌──────────────────────────┐               │
+       │            │  │  db_storage.py           │               │
+       │            │  │  SQLAlchemy ORM          │               │
+       │            │  └───────────────┬──────────┘               │
+       │            └──────────────────┼──────────────────────────┘
        │                                │ SQL (psycopg)
        │                                ▼
        │             ┌──────────────────────────────────────────────┐
-       └────────────►│           postgres container                  │
-                     │  weather_readings                           │
-                     │  significant_events                         │
-                     │  significant_event_readings (join)        │
-                     │  volume: postgres_data (persists restarts)  │
+       └────────────►│           postgres container                 │
+                     │  weather_readings                            │
+                     │  significant_events                          │
+                     │  significant_event_readings (join)           │
+                     │  volume: postgres_data (persists restarts)   │
                      └──────────────────────────────────────────────┘
 ```
 
