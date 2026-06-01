@@ -106,50 +106,55 @@ def test_get_health(client, db):
 def test_get_readings(client, db):
     """Readings endpoint returns wrapped list for a seeded city."""
 
-    city = "EndpointsReadings"
+    city = "Ottawa"
     db.add(_reading(city=city, temperature_2m=12.5))
     db.commit()
 
     response = client.get("/readings", params={"city": city, "limit": 10})
     assert response.status_code == 200
-    body = response.json()
-    assert len(body["readings"]) == 1
-    assert body["readings"][0]["city"] == city
-    assert body["readings"][0]["temperature_2m"] == 12.5
+    ours = [r for r in response.json()["readings"] if r["source"] == TEST_SOURCE]
+    assert len(ours) == 1
+    assert ours[0]["city"] == city
+    assert ours[0]["temperature_2m"] == 12.5
 
 
 def test_get_events(client, db):
     """Events endpoint returns wrapped list for seeded events."""
 
-    city = "EndpointsEvents"
+    city = "Toronto"
     db.add(_event(city=city, severity=2))
     db.commit()
 
     response = client.get("/events", params={"city": city, "limit": 10})
     assert response.status_code == 200
-    body = response.json()
-    assert len(body["events"]) == 1
-    assert body["events"][0]["city"] == city
-    assert body["events"][0]["severity"] == 2
+    ours = [
+        e for e in response.json()["events"] if e["rule_triggered"] == TEST_EVENT_RULE
+    ]
+    assert len(ours) == 1
+    assert ours[0]["city"] == city
+    assert ours[0]["severity"] == 2
 
 
 def test_get_events_with_city(client, db):
     """City filter returns only matching events."""
 
-    db.add(_event(city="EndpointsFilterA"))
-    db.add(_event(city="EndpointsFilterB"))
+    db.add(_event(city="Ottawa"))
+    db.add(_event(city="Vancouver"))
     db.commit()
 
-    response = client.get("/events", params={"city": "EndpointsFilterA"})
+    response = client.get("/events", params={"city": "Ottawa"})
     assert response.status_code == 200
-    cities = {e["city"] for e in response.json()["events"]}
-    assert cities == {"EndpointsFilterA"}
+    ours = [
+        e for e in response.json()["events"] if e["rule_triggered"] == TEST_EVENT_RULE
+    ]
+    assert {e["city"] for e in ours} == {"Ottawa"}
+    assert len(ours) == 1
 
 
 def test_get_events_with_limit(client, db):
     """Limit caps how many events are returned for a single city."""
 
-    city = "EndpointsLimitCity"
+    city = "Vancouver"
     base = datetime.now(timezone.utc)
     for i in range(3):
         db.add(
@@ -163,15 +168,17 @@ def test_get_events_with_limit(client, db):
 
     response = client.get("/events", params={"city": city, "limit": 2})
     assert response.status_code == 200
-    events = response.json()["events"]
-    assert len(events) == 2
-    assert all(e["city"] == city for e in events)
+    ours = [
+        e for e in response.json()["events"] if e["rule_triggered"] == TEST_EVENT_RULE
+    ]
+    assert len(ours) == 2
+    assert all(e["city"] == city for e in ours)
 
 
 def test_get_readings_returns_multiple_rows(client, db):
     """Multiple readings for the same city are all returned."""
 
-    city = "EndpointsMulti"
+    city = "Toronto"
     ts = datetime.now(timezone.utc)
     db.add(_reading(city=city, recorded_at=ts - timedelta(hours=1)))
     db.add(_reading(city=city, recorded_at=ts))
@@ -179,4 +186,21 @@ def test_get_readings_returns_multiple_rows(client, db):
 
     response = client.get("/readings", params={"city": city})
     assert response.status_code == 200
-    assert len(response.json()["readings"]) == 2
+    ours = [r for r in response.json()["readings"] if r["source"] == TEST_SOURCE]
+    assert len(ours) == 2
+
+
+def test_get_readings_rejects_unknown_city(client):
+    """Invalid city query returns 400 with a clear error message."""
+
+    response = client.get("/readings", params={"city": "Montreal"})
+    assert response.status_code == 400
+    assert "Montreal" in response.json()["detail"]
+
+
+def test_get_events_rejects_unknown_city(client):
+    """Invalid city query returns 400 with a clear error message."""
+
+    response = client.get("/events", params={"city": "Montreal"})
+    assert response.status_code == 400
+    assert "Montreal" in response.json()["detail"]

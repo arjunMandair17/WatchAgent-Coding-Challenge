@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from ..schemas import EventsResponse
 from ..services.events import get_recent_events
@@ -22,6 +22,10 @@ async def get_events(
     ),
 ) -> EventsResponse:
     """Return recent spike or event data for the specified city."""
-    # This function returns recent spike or event data for a given city, limited by the specified count.
+    if city is not None and city not in ("Ottawa", "Toronto", "Vancouver"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown city '{city}'. Must be one of: Ottawa, Toronto, Vancouver",
+        )
     events = await get_recent_events(city=city, limit=limit)
     return EventsResponse(events=events)

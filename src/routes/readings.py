@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from ..schemas import ReadingsResponse
 from ..services.readings import get_recent_readings
@@ -22,6 +22,10 @@ async def get_readings(
     ),
 ) -> ReadingsResponse:
     """Return recent raw weather readings for the specified city."""
-    # This function returns recent raw weather readings for a given city, limited by the specified count.
+    if city is not None and city not in ("Ottawa", "Toronto", "Vancouver"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown city '{city}'. Must be one of: Ottawa, Toronto, Vancouver",
+        )
     readings = await get_recent_readings(city=city, limit=limit)
     return ReadingsResponse(readings=readings)
