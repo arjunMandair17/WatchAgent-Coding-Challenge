@@ -293,19 +293,90 @@ The tests are located under the /tests directory of the repo, and they contain f
 
 In the creation of this project, I made many meticulous decisions as to which technologies I would use to complete the task. I will list my reasoning for choosing each one below.
 
-### Fast API as the Python API Framework:
-- I chose FastAPI as the primary API framework for it's unmatched speed when it comes to async support. It is lightning fast when it comes to parsing and sending back data while not blocking other incoming requests.
-- Additionally, FastAPI has built in Pydantic model validation and documentation with Swagger UI, which makes input checks very easy as well as providing a practical interface for testing API endpoints
-- For a lightweight project such as this with simple database querying and polling, a lightweight framework like FastAPI made the most sense
+### FastAPI as the Python API framework
 
+- I chose FastAPI as the primary API framework for its async support. The three city pollers run as background tasks while the API still handles `/health`, `/readings`, and `/events` without blocking.
+- FastAPI integrates with Pydantic for response models and generates interactive docs at `/docs`, which made it easy to verify the exact JSON contracts required by the challenge.
+- For a project with simple querying, polling, and clear REST endpoints, a lightweight ASGI framework was a better fit than a heavier stack.
 
+### PostgreSQL as the database
+
+- PostgreSQL stores all raw readings and significant events in a durable, relational schema with foreign keys between events and readings.
+- It supports the counts returned by `/health`, filtering by city and time, and persists data across container restarts via the `postgres_data` Docker volume (as required by the spec).
+- I use SQLAlchemy 2 as the ORM and Alembic for migrations so schema changes are versioned and applied automatically when the API container starts.
+
+### Pydantic for validation and API contracts
+
+- Response shapes for `/health`, `/readings`, and `/events` are defined in `src/schemas.py`, matching the challenge’s required JSON structure and keeping extra fields out of responses.
+- Ingest validation lives in `src/db/schemas.py` (e.g. rejecting future timestamps, negative precipitation, implausible temperatures) so bad data is caught before insert.
+- `pydantic-settings` loads `DATABASE_URL` and `POSTGRES_*` from `.env`, which keeps credentials out of the repository while still giving Docker Compose a single configuration file to copy.
+
+### Pytest for automated testing
+
+- The spec requires unit tests for deduplication (mocked Open-Meteo), event detection logic, and API response shape. pytest is the standard choice for Python and runs all of those in `tests/`.
+- `poll_test.py` mocks `requests.get` and proves duplicate timestamps only create one row; `event_detection_test.py` covers spikes, drops, city averages, and severe weather codes; `endpoints_test.py` checks the live HTTP layer with FastAPI’s `TestClient`.
+- GitHub Actions runs `pytest tests/` on every push to `main` against a Postgres service container, so tests stay aligned with production behavior.
 
 ## Event Detection Design
 
+The event detection model that I used for this project was meticulously designed with the aim of detecting strange spikes and dips in weather data across long and short periods of time. I tried to create a balance of detecting slight differences in weather data while filtering out general noise. 
+The detection model has three main criteria that it uses to categorize an event:
+
+### Weather Code Differences
+- The function checks the weather code provided by OpenMeteo at the time of the reading, which dictates the basic weather conditions
+- If the weather code conveys a strange weather reading it will flag an event with matching intensity, ignoring repeat events
+
+### Differences in Weather Data From Last Reading
+- The function computes the delta between the current and most previous weather reading for every stat
+- It then compares this delta to a dictionary of thresholds which dictate a noticeable jump in a statistic between the two readings
+- It can differentiate between a spike or drop in the statistic based on the sign of the delta
+
+### Differences in Weather Data From City History
+- Oftentimes a small rise or dip in a particular stat will not trigger an event even though it has been steadily changing over time
+- To account for this, the function computes the average of each stat over the past 12 readings in the given city and gathers the delta between this average and the current reading
+- This delta represents the change in the metric in the city over a larger period of time, which oftentimes reveals more about the current weather conditions than simply querying the most recent reading
+- This delta is then compared to the same thresholds as before to test deviation
+
 ## Cursor Setup
+
+This project uses Cursor rules, subagents, and a custom skill under `.cursor/` so AI-assisted work stays aligned with the architecture, API contracts, and take-home requirements.
 
 ### Rules
 
+Rules apply automatically when matching files are edited (via `globs` in each `.mdc` file).
+
+| Rule file | Applies to | Purpose |
+|-----------|------------|---------|
+| `python-fastapi.mdc` | `src/routes/**`, `main.py` | FastAPI conventions: async endpoints, `response_model`, Pydantic schemas in `src/schemas.py`, thin routes with logic in `src/services/`, env via `src/config.py`, and exact response shapes for `/health`, `/readings`, and `/events`. |
+| `api-rest.mdc` | `src/routes/**` | REST naming (nouns, plurals, query params for filters), correct HTTP methods and status codes, stateless design, and no leaking of DB/ORM internals in responses. |
+| `event-detection.mdc` | `src/services/poll.py`, `src/services/event_detection.py` | When and how to run detection (before persist, ≥3 prior readings, no duplicate timestamps), rule priority (severe WMO codes → step change vs previous → deviation vs 12h baseline), thresholds, severity, required event fields, and `rule_triggered` text format. Poll failures must log city + HTTP status. |
+| `tests.mdc` | `tests/**` | pytest + `TestClient`, isolated test DB, descriptive test names and docstrings, realistic fixtures, and assertions on shape/status/data—not “did not crash.” |
+
 ### Agents
 
+Subagents are defined in `.cursor/agents/` with scoped responsibilities so changes stay in the right layer.
+
+| Agent | Role |
+|-------|------|
+| **API Developer** (`api-developer.md`) | Builds and maintains FastAPI routes: REST conventions, Pydantic request/response models, `HTTPException`, `APIRouter`, async handlers, and service-layer calls (`readings.py`, `events.py`). Does not own schema design or event-detection logic. Points to the data-analysis script for ad-hoc DB inspection outside the API. |
+| **Test Specialist** (`test-specialist.md`) | Owns pytest coverage for API, database, validation, and integration flows. Extends existing tests under `tests/` rather than replacing them; uses `TestClient` and fixtures, not live servers. Uses the data-analysis script only for exploratory checks, not as a substitute for unit tests. |
+| **Database Designer** (`db-designer.md`) | Owns `weather_readings` and `significant_events` schema, SQLAlchemy models, Alembic migrations, indexes on `city`/`timestamp`, FK integrity, and Postgres-only config via `DATABASE_URL`. Does not write routes or detection rules. |
+
 ### Skills
+
+| Skill | Location | Purpose |
+|-------|----------|---------|
+| **data-analysis** | `.cursor/skills/data-analysis/` | CLI over the **local PostgreSQL** database (same `DATABASE_URL` / `POSTGRES_*` as the app). Does not call Open-Meteo. |
+
+Run from the repository root with Postgres up and migrations applied:
+
+```bash
+python .cursor/skills/data-analysis/analyze.py summary
+python .cursor/skills/data-analysis/analyze.py city-stats --hours 24
+python .cursor/skills/data-analysis/analyze.py city-stats --city Ottawa --hours 12
+python .cursor/skills/data-analysis/analyze.py events --city Toronto --hours 48 --limit 10
+python .cursor/skills/data-analysis/analyze.py compare --hours 24
+python .cursor/skills/data-analysis/analyze.py ask "How many readings are stored per city?"
+```
+
+Commands print **JSON** to stdout: row counts, per-city averages over a window, recent events (including `rule_triggered`), cross-city comparison, and keyword-routed `ask` queries. See `.cursor/skills/data-analysis/SKILL.md` for full usage.
